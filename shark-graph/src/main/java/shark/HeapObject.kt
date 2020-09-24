@@ -34,6 +34,14 @@ sealed class HeapObject {
   abstract val objectId: Long
 
   /**
+   * An positive object index that's specific to how Shark stores objects in memory.
+   * The index starts at 0 and ends at [HeapGraph.objectCount] - 1. There are no gaps, every index
+   * value corresponds to an object. Classes are first, then instances, then object arrays then
+   * primitive arrays.
+   */
+  abstract val objectIndex: Int
+
+  /**
    * Reads and returns the underlying [ObjectRecord].
    *
    * This may trigger IO reads.
@@ -70,7 +78,8 @@ sealed class HeapObject {
   class HeapClass internal constructor(
     private val hprofGraph: HprofHeapGraph,
     private val indexedObject: IndexedClass,
-    override val objectId: Long
+    override val objectId: Long,
+    override val objectIndex: Int
   ) : HeapObject() {
     override val graph: HeapGraph
       get() = hprofGraph
@@ -79,7 +88,12 @@ sealed class HeapObject {
      * The name of this class, identical to [Class.getName].
      */
     val name: String
-      get() = hprofGraph.className(objectId)
+      get() = hprofGraph.className(objectId).run {
+        // JVM name
+        if (startsWith("[L")) {
+          substring(2, length - 1) + "[]"
+        } else this
+      }
 
     /**
      * Returns [name] stripped of any string content before the last period (included).
@@ -109,7 +123,7 @@ sealed class HeapObject {
      * Returns true if this class is an array class, and false otherwise.
      */
     val isArrayClass: Boolean
-      get() = name.endsWith("[]")
+      get() = name.run { endsWith("[]") || startsWith("[L") }
 
     val isPrimitiveArrayClass: Boolean
       get() = name in primitiveArrayClassesByName
@@ -275,6 +289,7 @@ sealed class HeapObject {
     private val hprofGraph: HprofHeapGraph,
     internal val indexedObject: IndexedInstance,
     override val objectId: Long,
+    override val objectIndex: Int,
     /**
      * Whether this is an instance of a primitive wrapper type.
      */
@@ -474,6 +489,7 @@ sealed class HeapObject {
     private val hprofGraph: HprofHeapGraph,
     internal val indexedObject: IndexedObjectArray,
     override val objectId: Long,
+    override val objectIndex: Int,
     val isPrimitiveWrapperArray: Boolean
   ) : HeapObject() {
 
@@ -484,7 +500,12 @@ sealed class HeapObject {
      * The name of the class of this array, identical to [Class.getName].
      */
     val arrayClassName: String
-      get() = hprofGraph.className(indexedObject.arrayClassId)
+      get() = hprofGraph.className(indexedObject.arrayClassId).run {
+        // JVM name
+        if (startsWith("[L")) {
+          substring(2, length - 1) + "[]"
+        } else this
+      }
 
     /**
      * Returns [arrayClassName] stripped of any string content before the last period (included).
@@ -535,7 +556,8 @@ sealed class HeapObject {
   class HeapPrimitiveArray internal constructor(
     private val hprofGraph: HprofHeapGraph,
     private val indexedObject: IndexedPrimitiveArray,
-    override val objectId: Long
+    override val objectId: Long,
+    override val objectIndex: Int
   ) : HeapObject() {
 
     override val graph: HeapGraph

@@ -286,7 +286,7 @@ class HeapAnalyzer constructor(
   private fun buildLeakTraces(
     shortestPaths: List<ShortestPath>,
     inspectedObjectsByPath: List<List<InspectedObject>>,
-    retainedSizes: Map<Long, Int>?
+    retainedSizes: Map<Long, Pair<Int, Int>>?
   ): Pair<List<ApplicationLeak>, List<LibraryLeak>> {
     listener.onAnalysisProgress(BUILDING_LEAK_TRACES)
 
@@ -300,9 +300,10 @@ class HeapAnalyzer constructor(
       val firstLeakingRetainedSize = if (retainedSizes != null) {
         var lastRetainedSize: Int? = null
         inspectedObjects.forEach { inspectedObject ->
-          val retainedSize = retainedSizes[inspectedObject.heapObject.objectId]
-          if (retainedSize != null) {
-            inspectedObject.labels += "Retaining $retainedSize bytes"
+          val sizePair = retainedSizes[inspectedObject.heapObject.objectId]
+          if (sizePair != null) {
+            val (retainedSize, retainedCount) = sizePair
+            inspectedObject.labels += "Retaining $retainedSize bytes in $retainedCount objects"
             lastRetainedSize = retainedSize
           }
         }
@@ -379,7 +380,7 @@ class HeapAnalyzer constructor(
   private fun FindLeakInput.computeRetainedSizes(
     inspectedObjectsByPath: List<List<InspectedObject>>,
     dominatorTree: DominatorTree
-  ): Map<Long, Int>? {
+  ): Map<Long, Pair<Int, Int>>? {
     val nodeObjectIds = inspectedObjectsByPath.flatMap { inspectedObjects ->
       val unknownLeakingObjectIds =
         inspectedObjects.filter { it.leakingStatus == UNKNOWN }.map { it.heapObject.objectId }

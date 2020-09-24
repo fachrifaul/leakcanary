@@ -172,35 +172,40 @@ internal class HprofInMemoryIndex private constructor(
   }
 
   @Suppress("ReturnCount")
-  fun indexedObjectOrNull(objectId: Long): IndexedObject? {
-    var array: ByteSubArray? = classIndex[objectId]
-    if (array != null) {
-      return IndexedClass(
+  fun indexedObjectOrNull(objectId: Long): Pair<Int, IndexedObject>? {
+
+    var index = classIndex.indexOf(objectId)
+    if (index >= 0) {
+      val array= classIndex.getAtIndex(index)
+      return index to IndexedClass(
           position = array.readTruncatedLong(positionSize),
           superclassId = array.readId(),
           instanceSize = array.readInt(),
           recordSize = array.readTruncatedLong(bytesForClassSize)
       )
     }
-    array = instanceIndex[objectId]
-    if (array != null) {
-      return IndexedInstance(
+    index = instanceIndex.indexOf(objectId)
+    if (index >= 0) {
+      val array= instanceIndex.getAtIndex(index)
+      return classIndex.size + index to IndexedInstance(
           position = array.readTruncatedLong(positionSize),
           classId = array.readId(),
           recordSize = array.readTruncatedLong(bytesForInstanceSize)
       )
     }
-    array = objectArrayIndex[objectId]
-    if (array != null) {
-      return IndexedObjectArray(
+    index = objectArrayIndex.indexOf(objectId)
+    if (index >= 0) {
+      val array= objectArrayIndex.getAtIndex(index)
+      return classIndex.size + instanceIndex.size + index to IndexedObjectArray(
           position = array.readTruncatedLong(positionSize),
           arrayClassId = array.readId(),
           recordSize = array.readTruncatedLong(bytesForObjectArraySize)
       )
     }
-    array = primitiveArrayIndex[objectId]
-    if (array != null) {
-      return IndexedPrimitiveArray(
+    index = primitiveArrayIndex.indexOf(objectId)
+    if (index >= 0) {
+      val array= primitiveArrayIndex.getAtIndex(index)
+      return classIndex.size + instanceIndex.size + index + primitiveArrayIndex.size to IndexedPrimitiveArray(
           position = array.readTruncatedLong(positionSize),
           primitiveType = PrimitiveType.values()[array.readByte()
               .toInt()],

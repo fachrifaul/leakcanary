@@ -26,6 +26,14 @@ internal class SortedBytesMap(
     if (keyIndex < 0) {
       return null
     }
+    return getAtIndex(keyIndex)
+  }
+
+  fun indexOf(key: Long): Int {
+    return binarySearch(key)
+  }
+
+  fun getAtIndex(keyIndex: Int): ByteSubArray {
     val valueIndex = keyIndex * bytesPerEntry + bytesPerKey
     return ByteSubArray(sortedEntries, valueIndex, bytesPerValue, longIdentifiers)
   }
