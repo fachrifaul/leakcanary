@@ -105,6 +105,9 @@ sealed class HeapObject {
         return indexedObject.recordSize.toInt()
       }
 
+    val hasReferenceInstanceFields: Boolean
+      get() = indexedObject.hasRefFields
+
     /**
      * Returns true if this class is an array class, and false otherwise.
      */

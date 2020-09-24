@@ -111,7 +111,8 @@ internal class HprofInMemoryIndex private constructor(
               position = array.readTruncatedLong(positionSize),
               superclassId = array.readId(),
               instanceSize = array.readInt(),
-              recordSize = array.readTruncatedLong(bytesForClassSize)
+              recordSize = array.readTruncatedLong(bytesForClassSize),
+              hasRefFields = array.readByte() == 1.toByte()
           )
         }
   }
@@ -179,7 +180,8 @@ internal class HprofInMemoryIndex private constructor(
           position = array.readTruncatedLong(positionSize),
           superclassId = array.readId(),
           instanceSize = array.readInt(),
-          recordSize = array.readTruncatedLong(bytesForClassSize)
+          recordSize = array.readTruncatedLong(bytesForClassSize),
+          hasRefFields = array.readByte() == 1.toByte()
       )
     }
     array = instanceIndex[objectId]
@@ -266,7 +268,8 @@ internal class HprofInMemoryIndex private constructor(
     private val classNames = LongLongScatterMap(expectedElements = classCount)
 
     private val classIndex = UnsortedByteEntries(
-        bytesPerValue = positionSize + identifierSize + 4 + bytesForClassSize,
+        // TODO Do we really need an extra full byte here or can we sneak this in the existing bytes?
+        bytesPerValue = positionSize + identifierSize + 4 + bytesForClassSize + 1,
         longIdentifiers = longIdentifiers,
         initialCapacity = classCount
     )
@@ -330,6 +333,7 @@ internal class HprofInMemoryIndex private constructor(
                 writeId(record.superclassId)
                 writeInt(record.instanceSize)
                 writeTruncatedLong(record.recordSize, bytesForClassSize)
+                writeByte(if (record.hasRefFields) 1 else 0)
               }
         }
         is InstanceSkipContentRecord -> {
